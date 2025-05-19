@@ -1,6 +1,8 @@
-const fetch = require('node-fetch'); // Or import fetch from 'node-fetch'; if using ES modules top-level
+// const fetch = require('node-fetch'); // Or import fetch from 'node-fetch'; if using ES modules top-level
 
 export default async function handler(req, res) {
+    const fetch = (await import('node-fetch')).default;
+
     console.log('--- deepseek-proxy function invoked ---');
     console.log('Request method:', req.method);
     console.log('Request body (first 100 chars if exists):', JSON.stringify(req.body)?.substring(0, 100));
