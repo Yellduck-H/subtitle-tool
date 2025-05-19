@@ -1,6 +1,10 @@
 const fetch = require('node-fetch'); // Or import fetch from 'node-fetch'; if using ES modules top-level
 
 export default async function handler(req, res) {
+    console.log('--- deepseek-proxy function invoked ---');
+    console.log('Request method:', req.method);
+    console.log('Request body (first 100 chars if exists):', JSON.stringify(req.body)?.substring(0, 100));
+
     // 只允许POST请求
     if (req.method !== 'POST') {
         res.setHeader('Allow', ['POST']);
