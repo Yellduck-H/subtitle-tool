@@ -6,6 +6,7 @@ export default async function handler(req, res) {
     console.log('--- deepseek-proxy function invoked ---');
     console.log('Request method:', req.method);
     console.log('Request body (first 100 chars if exists):', JSON.stringify(req.body)?.substring(0, 100));
+    console.log(`DEEPSEEK_API_KEY is set: ${!!deepSeekApiKey}`);
 
     // 只允许POST请求
     if (req.method !== 'POST') {
@@ -26,6 +27,7 @@ export default async function handler(req, res) {
         // 从前端请求中获取body
         const requestPayload = req.body;
 
+        console.log('Calling DeepSeek API at:', new Date().toISOString());
         const apiResponse = await fetch(deepSeekApiUrl, {
             method: 'POST',
             headers: {
@@ -48,8 +50,8 @@ export default async function handler(req, res) {
             res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
-            // Vercel (Node.js runtime) 可以直接pipe ReadableStream
             apiResponse.body.pipe(res);
+            return;
         } else {
             // 处理非流式响应
             const data = await apiResponse.json();
