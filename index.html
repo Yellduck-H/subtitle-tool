@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>字幕提取工具 - 仅保留文本内容</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 图标库 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
+    <style>
+        .bg-gradient {
+            background: linear-gradient(135deg, #a5b4fc, #818cf8);
+        }
+        
+        .btn-gradient {
+            background: linear-gradient(135deg, #818cf8, #6366f1);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-deepseek {
+            background: linear-gradient(135deg, #10b981, #059669);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-deepseek:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2);
+        }
+        
+        /* 通用按钮样式 */
+        .tool-btn {
+            min-width: 140px;
+            height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 22px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 0 1.25rem;
+            white-space: nowrap;
+        }
+        
+        /* 统一的结果区域按钮样式 */
+        .result-btn {
+            height: 48px;
+            border-radius: 24px;
+            min-width: 150px;
+            font-weight: 500;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            white-space: nowrap;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 0 20px;
+        }
+        
+        .result-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+        
+        .result-btn:active {
+            transform: translateY(0px);
+        }
+        
+        .result-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+        }
+        
+        .result-btn.btn-primary {
+            background: linear-gradient(135deg, #818cf8, #6366f1);
+            color: white;
+        }
+        
+        .result-btn.btn-primary:hover {
+            box-shadow: 0 8px 16px rgba(99, 102, 241, 0.2);
+        }
+        
+        .result-btn.btn-ai {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            min-width: 190px;
+            padding: 0 22px;
+        }
+        
+        .result-btn.btn-ai:hover {
+            box-shadow: 0 8px 16px rgba(16, 185, 129, 0.2);
+        }
+        
+        .tool-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* 添加切换按钮样式 */
+        .tab-btn {
+            position: relative;
+            z-index: 1;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab-btn.active {
+            color: #6366f1;
+            font-weight: 500;
+            border-bottom: 2px solid #6366f1;
+        }
+        
+        .tab-btn:hover {
+            color: #6366f1;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50 flex flex-col">
+    <!-- 页头 -->
+    <header class="bg-gradient text-white py-6">
+        <div class="container mx-auto px-6 md:px-12">
+            <h1 class="text-3xl font-bold text-center">字幕提取工具</h1>
+            <p class="text-center mt-2 opacity-90">上传SRT文件，仅保留文本内容</p>
+        </div>
+    </header>
+
+    <!-- 主要内容 -->
+    <main class="flex-grow container mx-auto px-6 md:px-12 py-12">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
+            <!-- 上传卡片 -->
+            <div id="dropArea" class="bg-white rounded-xl shadow-sm p-8 card-hover border-2 border-dashed border-gray-300 hover:border-indigo-400 transition-colors flex flex-col justify-center items-center min-h-[400px]">
+                <div class="text-center max-w-md mx-auto">
+                    <i class="ri-file-upload-line text-5xl text-indigo-500 mb-6"></i>
+                    <h2 class="text-xl font-semibold mb-4">上传SRT字幕文件</h2>
+                    <p class="text-gray-600 mb-8">支持标准SRT格式，自动去除序号、时间戳和空行</p>
+                    
+                    <input type="file" id="fileInput" accept=".srt" class="hidden">
+                    <div class="text-gray-500 mb-6">
+                        <p class="mb-3">拖放SRT文件到此处</p>
+                        <p class="mb-6">或</p>
+                        <button id="browseBtn" class="tool-btn btn-gradient text-white">
+                            浏览文件
+                        </button>
+                    </div>
+                    
+                    <div id="fileInfo" class="mt-6 hidden">
+                        <div class="flex items-center justify-center">
+                            <i class="ri-file-text-line text-indigo-500 text-xl mr-2"></i>
+                            <span id="fileName" class="text-gray-700"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 处理结果卡片 -->
+            <div id="resultCard" class="bg-white rounded-xl shadow-sm p-8 card-hover">
+                <h2 class="text-xl font-semibold mb-4 flex items-center">
+                    <i class="ri-text mr-2 text-indigo-500"></i>
+                    处理结果
+                </h2>
+                
+                <!-- 添加切换按钮 -->
+                <div class="flex border-b border-gray-200 mb-4">
+                    <button id="originalTabBtn" class="tab-btn active">原始提取</button>
+                    <button id="aiTabBtn" class="tab-btn">智能优化</button>
+                </div>
+                
+                <!-- 结果内容区域 -->
+                <div id="resultTabs">
+                    <!-- 原始提取结果 -->
+                    <div id="originalTab" class="mb-4">
+                        <textarea id="outputText" class="w-full h-64 p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none resize-none" readonly placeholder="处理后的字幕内容将显示在这里..."></textarea>
+                    </div>
+                    
+                    <!-- AI优化结果 -->
+                    <div id="aiTab" class="mb-4 hidden">
+                        <textarea id="aiOutputText" class="w-full h-64 p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none resize-none" readonly placeholder="AI优化后的内容将显示在这里..."></textarea>
+                    </div>
+                </div>
+                
+                <div class="flex flex-wrap justify-center gap-4 mt-6">
+                    <button id="copyBtn" class="result-btn btn-primary" disabled>
+                        <i class="ri-clipboard-line text-lg"></i>
+                        复制文本
+                    </button>
+                    
+                    <button id="downloadBtn" class="result-btn btn-primary" disabled>
+                        <i class="ri-download-line text-lg"></i>
+                        下载文本文件
+                    </button>
+                    
+                    <button id="aiProcessBtn" class="result-btn btn-ai" disabled>
+                        <i class="ri-brain-line text-lg" id="aiProcessIcon"></i>
+                        <span id="aiProcessBtnText" class="text-sm whitespace-nowrap">DeepSeek智能优化</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-white py-6 border-t border-gray-200">
+        <div class="container mx-auto px-6 text-center text-gray-500 text-sm">
+            <p>字幕提取工具 © 2025 | 使用 <a href="https://tailwindcss.com" class="text-indigo-500 hover:underline" target="_blank">Tailwind CSS</a> 构建</p>
+            <p class="mt-2">
+                <a href="https://unsplash.com" class="text-indigo-500 hover:underline" target="_blank">图片来源 Unsplash</a> | 
+                <a href="https://remixicon.com" class="text-indigo-500 hover:underline" target="_blank">图标来源 Remix Icon</a>
+            </p>
+        </div>
+    </footer>
+
+    <!-- 提示消息 -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg transform translate-y-24 opacity-0 transition-all duration-300 flex items-center">
+        <i id="toastIcon" class="mr-2"></i>
+        <span id="toastMessage"></span>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 元素获取
+            const fileInput = document.getElementById('fileInput');
+            const browseBtn = document.getElementById('browseBtn');
+            const dropArea = document.getElementById('dropArea');
+            const fileInfo = document.getElementById('fileInfo');
+            const fileName = document.getElementById('fileName');
+            const outputText = document.getElementById('outputText');
+            const aiOutputText = document.getElementById('aiOutputText');
+            const copyBtn = document.getElementById('copyBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const aiProcessBtn = document.getElementById('aiProcessBtn');
+            const aiProcessBtnText = document.getElementById('aiProcessBtnText');
+            const toast = document.getElementById('toast');
+            const toastIcon = document.getElementById('toastIcon');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            // 切换标签相关元素
+            const originalTabBtn = document.getElementById('originalTabBtn');
+            const aiTabBtn = document.getElementById('aiTabBtn');
+            const originalTab = document.getElementById('originalTab');
+            const aiTab = document.getElementById('aiTab');
+            
+            // 当前激活的标签
+            let activeTab = 'original';
+            
+            // 标签切换功能
+            originalTabBtn.addEventListener('click', () => {
+                setActiveTab('original');
+            });
+            
+            aiTabBtn.addEventListener('click', () => {
+                setActiveTab('ai');
+            });
+            
+            // 设置激活标签
+            function setActiveTab(tab) {
+                activeTab = tab;
+                
+                // 更新标签按钮状态
+                if (tab === 'original') {
+                    originalTabBtn.classList.add('active');
+                    aiTabBtn.classList.remove('active');
+                    originalTab.classList.remove('hidden');
+                    aiTab.classList.add('hidden');
+                } else {
+                    originalTabBtn.classList.remove('active');
+                    aiTabBtn.classList.add('active');
+                    originalTab.classList.add('hidden');
+                    aiTab.classList.remove('hidden');
+                }
+                
+                // 更新复制和下载按钮的目标
+                updateButtonTargets();
+            }
+            
+            // 更新复制和下载按钮目标
+            function updateButtonTargets() {
+                // 当前活跃标签的文本区域
+                const currentTextarea = activeTab === 'original' ? outputText : aiOutputText;
+                
+                // 更新复制按钮事件
+                copyBtn.onclick = () => {
+                    currentTextarea.select();
+                    document.execCommand('copy');
+                    showToast('文本已复制到剪贴板', 'success');
+                };
+                
+                // 更新下载按钮事件
+                downloadBtn.onclick = () => {
+                    const text = currentTextarea.value;
+                    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    
+                    // 从原始文件名中提取基本名称
+                    const originalFileName = fileName.textContent;
+                    const baseName = originalFileName.replace('.srt', '');
+                    
+                    // 根据当前标签添加不同的后缀
+                    const suffix = activeTab === 'original' ? '_纯文本' : '_AI优化';
+                    
+                    a.href = url;
+                    a.download = `${baseName}${suffix}.txt`;
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }, 100);
+                    
+                    showToast('文件下载已开始', 'success');
+                };
+            }
+            
+            // AI处理功能
+            aiProcessBtn.addEventListener('click', async () => {
+                const originalText = outputText.value;
+                if (!originalText.trim()) {
+                    showToast('没有可处理的文本内容', 'error');
+                    return;
+                }
+                
+                // 立即切换到AI标签页
+                setActiveTab('ai');
+                
+                // 清空旧内容并直接显示加载提示（不是作为placeholder）
+                aiOutputText.value = '正在思考中...';
+                aiOutputText.readOnly = true;
+                
+                // 显示加载状态
+                aiProcessBtn.disabled = true;
+                const aiProcessIcon = document.getElementById('aiProcessIcon');
+                aiProcessIcon.className = 'loading-spinner';
+                aiProcessBtnText.textContent = '正在处理...';
+                
+                try {
+                    // 调用DeepSeek API (流式处理)
+                    await processWithDeepSeekAI(originalText);
+                    
+                    showToast('AI优化处理完成', 'success');
+                } catch (error) {
+                    console.error('AI处理错误:', error);
+                    showToast('AI处理失败: ' + error.message, 'error');
+                    // 出错时清空内容，恢复占位符
+                    aiOutputText.value = '';
+                    aiOutputText.placeholder = 'AI优化后的内容将显示在这里...';
+                } finally {
+                    // 恢复按钮状态
+                    aiProcessBtn.disabled = false;
+                    aiProcessIcon.className = 'ri-brain-line text-lg';
+                    aiProcessBtnText.textContent = 'DeepSeek智能优化';
+                    aiOutputText.readOnly = true; // 保持只读状态
+                }
+            });
+            
+            // 调用DeepSeek API处理文本 (流式输出)
+            async function processWithDeepSeekAI(text) {
+                // const apiKey = 'sk-2242c75077604753827b5909a950a705'; // <--- 已删除或注释掉
+                const apiUrl = '/api/deepseek-proxy'; // <--- 修改后的API URL
+                
+                // AI提示词
+                const prompt = `# 角色设定
+你是一位专业的文本编辑与内容优化专家。
+
+# 背景任务
+你的任务是处理从字幕文件中提取的、被打散成多行短句的文本。这些文本片段往往将一个完整的句子拆分，影响了其自然流畅性和整体阅读体验。
+
+#核心指令
+请你运用你强大的自然语言理解能力、内容诊断能力和深度思考能力，对以下提供的字幕文本片段执行以下操作：
+
+1.  **智能句子合并 (Intelligent Sentence Merging):**
+    *   仔细分析输入的每一行短句。
+    *   准确识别并合并逻辑上属于同一个完整句子的分散片段。
+    *   确保合并后的句子在文法上正确无误。
+
+2.  **内容自然化与流畅化 (Content Naturalization & Fluent Rephrasing):**
+    *   将合并后的句子进行重新组织和润色，使其表达更加自然、流畅，符合标准书面语的表达习惯。
+    *   消除字幕文本中常见的生硬感和口语化表达（除非特定风格要求保留）。
+
+3.  **段落化重构 (Paragraph Restructuring):**
+    *   根据上下文的逻辑关系和语义连贯性，将连续的、主题相关的句子组织成结构清晰、易于阅读的段落。
+    *   确保段落间的过渡自然，逻辑层次分明。
+
+4.  **格式与标点优化 (Formatting & Punctuation Optimization):**
+    *   正确、规范地使用标点符号，优化断句，增强文本的可读性。
+    *   确保最终输出的文本格式整洁，适合阅读和存档。
+
+5.  **忠实原文原则 (Adherence to Original Meaning):**
+    *   在进行上述所有优化处理时，必须严格保持对原始内容核心意义、关键信息和情感色彩的忠实度。
+    *   不允许随意增添、删减原文未包含的信息，或歪曲原文意图。
+
+# 最终目标
+将输入的、分散的字幕短句文本，转换为一段或多段语义连贯、表达自然、逻辑清晰、格式规范的优质段落文本，使其焕发新生，更适合沉浸式阅读和长期保存。
+
+# 需要处理的文本
+${text}`;
+                
+                const requestData = {
+                    model: "deepseek-reasoner",
+                    messages: [
+                        { role: "user", content: prompt }
+                    ],
+                    stream: true // 使用流式输出
+                };
+                
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                            // 'Authorization': `Bearer ${apiKey}` // <--- 已删除或注释掉
+                        },
+                        body: JSON.stringify(requestData)
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error("Error from proxy:", errorData);
+                        throw new Error(errorData.error?.message || '请求代理失败');
+                    }
+                    
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder("utf-8");
+                    
+                    let isFirstChunk = true;
+                    // aiOutputText.value = ''; // 确保在调用此函数前，例如在aiProcessBtn的事件监听器中清空
+                    let accumulatedText = '';
+                    
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        
+                        const chunk = decoder.decode(value, { stream: true });
+                        const lines = chunk.split('\n\n'); 
+                        
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const dataString = line.substring(6).trim();
+                                if (dataString === '[DONE]') {
+                                    continue;
+                                }
+                                try {
+                                    const parsed = JSON.parse(dataString);
+                                    const contentDelta = parsed.choices[0]?.delta?.content || '';
+                                    if (contentDelta) {
+                                        if (isFirstChunk) {
+                                            if (aiOutputText.value === '正在思考中...') { // 检查是否是初始提示
+                                               aiOutputText.value = ''; // 如果是，则清空
+                                            }
+                                            isFirstChunk = false;
+                                        }
+                                        accumulatedText += contentDelta;
+                                        aiOutputText.value = accumulatedText;
+                                        aiOutputText.scrollTop = aiOutputText.scrollHeight;
+                                        await new Promise(resolve => setTimeout(resolve, 10)); 
+                                    }
+                                } catch (e) {
+                                    console.error('解析流数据块失败:', line, e);
+                                }
+                            }
+                        }
+                    }
+                    return accumulatedText;
+
+                } catch (error) {
+                    console.error('API请求或流处理失败:', error);
+                    throw error;
+                }
+            }
+            
+            // 点击浏览按钮触发文件输入
+            browseBtn.addEventListener('click', () => {
+                fileInput.click();
+            });
+            
+            // 拖放区域事件
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => {
+                    dropArea.classList.remove('border-gray-300');
+                    dropArea.classList.add('border-indigo-500');
+                });
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => {
+                    dropArea.classList.remove('border-indigo-500');
+                    dropArea.classList.add('border-gray-300');
+                });
+            });
+            
+            // 处理拖放文件
+            dropArea.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                if (files.length) {
+                    fileInput.files = files;
+                    handleFile(files[0]);
+                }
+            });
+            
+            // 处理选择的文件
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    handleFile(e.target.files[0]);
+                }
+            });
+            
+            // 处理文件
+            function handleFile(file) {
+                // 检查文件类型
+                if (!file.name.toLowerCase().endsWith('.srt')) {
+                    showToast('请上传.srt格式的字幕文件', 'error');
+                    return;
+                }
+                
+                // 显示文件信息
+                fileInfo.classList.remove('hidden');
+                fileName.textContent = file.name;
+                
+                // 读取文件
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const fileContent = e.target.result;
+                    const processedText = processSRT(fileContent);
+                    
+                    // 显示处理结果
+                    outputText.value = processedText;
+                    
+                    // 启用按钮
+                    copyBtn.disabled = false;
+                    downloadBtn.disabled = false;
+                    aiProcessBtn.disabled = false;
+                    
+                    // 清空AI处理结果
+                    aiOutputText.value = '';
+                    
+                    // 切换到原始标签
+                    setActiveTab('original');
+                    
+                    showToast('字幕处理成功', 'success');
+                };
+                
+                reader.onerror = function() {
+                    showToast('文件读取失败', 'error');
+                };
+                
+                reader.readAsText(file);
+            }
+            
+            // 处理SRT文件内容，提取纯文本
+            function processSRT(srtContent) {
+                const lines = srtContent.split(/\r?\n/); // 按行分割，兼容不同操作系统的换行符
+                let subtitleTextOnly = [];
+                let isSubtitleLine = false;
+
+                for (const line of lines) {
+                    const trimmedLine = line.trim();
+
+                    if (trimmedLine === "") { // 空行，通常在字幕文本之后
+                        isSubtitleLine = false; // 重置状态
+                        continue;
+                    }
+
+                    // 检查是否是时间戳行
+                    if (trimmedLine.includes("-->")) {
+                        isSubtitleLine = true; // 标记下一行开始是字幕
+                        continue;
+                    }
+
+                    // 检查是否是序号行 (纯数字)
+                    if (/^\d+$/.test(trimmedLine) && !isSubtitleLine) {
+                        continue;
+                    }
+                    
+                    // 如果是字幕文本行，则添加到结果中
+                    if (isSubtitleLine && trimmedLine !== "") {
+                        subtitleTextOnly.push(trimmedLine);
+                    }
+                }
+                return subtitleTextOnly.join("\n"); // 将所有字幕行合并，用换行符分隔
+            }
+            
+            // 显示提示消息
+            function showToast(message, type = 'info') {
+                // 设置图标和颜色
+                if (type === 'success') {
+                    toastIcon.className = 'ri-check-line mr-2';
+                    toast.className = toast.className.replace(/bg-(gray|green|red)-600/g, 'bg-green-600');
+                } else if (type === 'error') {
+                    toastIcon.className = 'ri-error-warning-line mr-2';
+                    toast.className = toast.className.replace(/bg-(gray|green|red)-600/g, 'bg-red-600');
+                } else {
+                    toastIcon.className = 'ri-information-line mr-2';
+                    toast.className = toast.className.replace(/bg-(green|red)-600/g, 'bg-gray-800');
+                }
+                
+                // 设置消息
+                toastMessage.textContent = message;
+                
+                // 显示消息
+                toast.style.transform = 'translateY(0)';
+                toast.style.opacity = '1';
+                
+                // 3秒后隐藏
+                setTimeout(() => {
+                    toast.style.transform = 'translateY(24px)';
+                    toast.style.opacity = '0';
+                }, 3000);
+            }
+            
+            // 初始化按钮目标
+            updateButtonTargets();
+        });
+    </script>
+</body>
+</html>

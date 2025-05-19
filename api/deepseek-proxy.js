@@ -1,0 +1,57 @@
+const fetch = require('node-fetch'); // Or import fetch from 'node-fetch'; if using ES modules top-level
+
+export default async function handler(req, res) {
+    // 只允许POST请求
+    if (req.method !== 'POST') {
+        res.setHeader('Allow', ['POST']);
+        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+    }
+
+    const deepSeekApiKey = process.env.DEEPSEEK_API_KEY; // 从Vercel环境变量读取
+
+    if (!deepSeekApiKey) {
+        console.error('DEEPSEEK_API_KEY is not set in environment variables.');
+        return res.status(500).json({ error: 'API Key not configured on server.' });
+    }
+
+    const deepSeekApiUrl = 'https://api.deepseek.com/chat/completions';
+
+    try {
+        // 从前端请求中获取body
+        const requestPayload = req.body;
+
+        const apiResponse = await fetch(deepSeekApiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${deepSeekApiKey}`,
+            },
+            body: JSON.stringify(requestPayload),
+        });
+
+        // 检查来自DeepSeek API的响应是否OK
+        if (!apiResponse.ok) {
+            // Forward the error from DeepSeek API
+            const errorData = await apiResponse.json();
+            console.error('Error from DeepSeek API:', errorData);
+            return res.status(apiResponse.status).json(errorData);
+        }
+        
+        // 处理流式响应
+        if (requestPayload.stream && apiResponse.body) {
+            res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            // Vercel (Node.js runtime) 可以直接pipe ReadableStream
+            apiResponse.body.pipe(res);
+        } else {
+            // 处理非流式响应
+            const data = await apiResponse.json();
+            res.status(200).json(data);
+        }
+
+    } catch (error) {
+        console.error('Error in proxy function:', error);
+        res.status(500).json({ error: 'An internal server error occurred.' });
+    }
+} 
