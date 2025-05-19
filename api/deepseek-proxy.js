@@ -2,6 +2,7 @@
 
 export default async function handler(req, res) {
     const fetch = (await import('node-fetch')).default;
+    const deepSeekApiKey = process.env.DEEPSEEK_API_KEY; // <--- 将此行移到前面
 
     console.log('--- deepseek-proxy function invoked ---');
     console.log('Request method:', req.method);
@@ -13,8 +14,6 @@ export default async function handler(req, res) {
         res.setHeader('Allow', ['POST']);
         return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
     }
-
-    const deepSeekApiKey = process.env.DEEPSEEK_API_KEY; // 从Vercel环境变量读取
 
     if (!deepSeekApiKey) {
         console.error('DEEPSEEK_API_KEY is not set in environment variables.');
